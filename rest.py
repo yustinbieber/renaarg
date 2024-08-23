@@ -6,12 +6,20 @@ from cryptography.hazmat.primitives.serialization import pkcs12
 from cryptography.hazmat.primitives import serialization
 import tempfile
 import os
+import base64
 
 app = Flask(__name__)
 
-############# CAMBIA DIRECTORIO POR EL TUYO
-CERT_PATH = os.getenv('CERT_PATH', 'cert.pfx')  # Ruta al archivo de certificado
-CERT_PASSWORD = os.getenv('CERT_PASSWORD', 'sape')  # Contraseña del certificado
+# Lee la variable de entorno para el certificado y la contraseña
+CERT_PFX_BASE64 = os.getenv('CERT_PFX_BASE64')
+CERT_PASSWORD = os.getenv('CERT_PASSWORD', 'sape')
+
+def decode_cert(cert_base64):
+    """Decodifica el archivo PFX desde Base64 y guarda el contenido en un archivo temporal."""
+    cert_data = base64.b64decode(cert_base64)
+    with tempfile.NamedTemporaryFile(delete=False, suffix='.pfx') as cert_file:
+        cert_file.write(cert_data)
+        return cert_file.name
 
 
 SOAP_SERVICES = {
@@ -64,6 +72,7 @@ SOAP_BODIES = {
 }
 
 def get_cert(cert_path, password):
+    """Convierte el archivo PFX a PEM y guarda las claves en archivos temporales."""
     with open(cert_path, 'rb') as f:
         p12_data = f.read()
     
@@ -92,12 +101,16 @@ def get_cert(cert_path, password):
     return (cert_file.name, key_file.name)
 
 def make_soap_request(service_name, dni, sexo):
+    """Realiza una solicitud SOAP usando el certificado y clave."""
     url = SOAP_SERVICES[service_name]
     body = SOAP_BODIES[service_name].format(dni=dni, sexo=sexo)
     
-    cert_path, key_path = get_cert(CERT_PATH, CERT_PASSWORD)
+    # Decodifica el certificado desde Base64 y obtiene el archivo temporal
+    cert_path = decode_cert(CERT_PFX_BASE64)
     
     try:
+        cert_path, key_path = get_cert(cert_path, CERT_PASSWORD)
+        
         response = requests.post(
             url,
             data=body,
@@ -111,10 +124,12 @@ def make_soap_request(service_name, dni, sexo):
     finally:
         os.remove(cert_path)
         os.remove(key_path)
+        os.remove(cert_path)  # Elimina el archivo PFX temporal
 
     return response.text
 
 def fetch_data(dni, sexo):
+    """Obtiene datos de varios servicios SOAP."""
     results = {}
     for service in ['padres', 'hijos']:
         xml_response = make_soap_request(service, dni, sexo)
@@ -127,6 +142,7 @@ def fetch_data(dni, sexo):
 
 @app.route('/api/fetch_data', methods=['GET'])
 def api_fetch_data():
+    """Maneja la solicitud GET para obtener datos."""
     dni = request.args.get('dni')
     sexo = request.args.get('sexo')
 
