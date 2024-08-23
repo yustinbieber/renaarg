@@ -1,0 +1,6 @@
+flask
+requests
+xmltodict
+cryptography
+pillow 
+python-telegram-bot
