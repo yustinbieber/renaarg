@@ -10,8 +10,9 @@ import os
 app = Flask(__name__)
 
 ############# CAMBIA DIRECTORIO POR EL TUYO
-CERT_PATH = 'cert.pfx' #CAMBIA DIRECTORIO
-CERT_PASSWORD = 'sape'
+CERT_PATH = os.getenv('CERT_PATH', 'cert.pfx')  # Ruta al archivo de certificado
+CERT_PASSWORD = os.getenv('CERT_PASSWORD', 'sape')  # Contraseña del certificado
+
 
 SOAP_SERVICES = {
     'padres': 'https://renaperdatosc.idear.gov.ar:8446/WSpadres.php',
