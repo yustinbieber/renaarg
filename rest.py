@@ -1,26 +1,17 @@
 from flask import Flask, request, jsonify
 import requests
 import xmltodict
+from requests_toolbelt.adapters.ssl import SSLAdapter
 from cryptography.hazmat.primitives.serialization import pkcs12
 from cryptography.hazmat.primitives import serialization
 import tempfile
 import os
-import base64
 
 app = Flask(__name__)
 
-# Lee la variable de entorno para el certificado y la contraseña
-CERT_PFX_BASE64 = os.getenv('CERT_PFX_BASE64')
-CERT_PASSWORD = os.getenv('CERT_PASSWORD', 'sape')
-
-def decode_cert(cert_base64):
-    """Decodifica el archivo PFX desde Base64 y guarda el contenido en un archivo permanente."""
-    cert_data = base64.b64decode(cert_base64)
-    cert_path = 'cert.pfx'
-    with open(cert_path, 'wb') as cert_file:
-        cert_file.write(cert_data)
-    return cert_path
-
+############# CAMBIA DIRECTORIO POR EL TUYO
+CERT_PATH = 'cert.pfx' #CAMBIA DIRECTORIO
+CERT_PASSWORD = 'sape'
 
 SOAP_SERVICES = {
     'padres': 'https://renaperdatosc.idear.gov.ar:8446/WSpadres.php',
@@ -72,10 +63,6 @@ SOAP_BODIES = {
 }
 
 def get_cert(cert_path, password):
-    """Convierte el archivo PFX a PEM y guarda las claves en archivos temporales."""
-    if not os.path.exists(cert_path):
-        raise FileNotFoundError(f"El archivo {cert_path} no existe")
-    
     with open(cert_path, 'rb') as f:
         p12_data = f.read()
     
@@ -101,25 +88,15 @@ def get_cert(cert_path, password):
     key_file.write(key_pem)
     key_file.close()
 
-    # Verificar existencia de los archivos creados
-    if not os.path.exists(cert_file.name):
-        raise FileNotFoundError(f"El archivo {cert_file.name} no se creó correctamente")
-    if not os.path.exists(key_file.name):
-        raise FileNotFoundError(f"El archivo {key_file.name} no se creó correctamente")
-
     return (cert_file.name, key_file.name)
 
 def make_soap_request(service_name, dni, sexo):
-    """Realiza una solicitud SOAP usando el certificado y clave."""
     url = SOAP_SERVICES[service_name]
     body = SOAP_BODIES[service_name].format(dni=dni, sexo=sexo)
     
-    # Decodifica el certificado desde Base64 y obtiene el archivo temporal
-    cert_path = decode_cert(CERT_PFX_BASE64)
+    cert_path, key_path = get_cert(CERT_PATH, CERT_PASSWORD)
     
     try:
-        cert_path, key_path = get_cert(cert_path, CERT_PASSWORD)
-        
         response = requests.post(
             url,
             data=body,
@@ -131,14 +108,12 @@ def make_soap_request(service_name, dni, sexo):
             verify=False  # Desactiva la verificación del certificado
         )
     finally:
-        os.remove(cert_path)  # Elimina el archivo PFX temporal
-        os.remove(cert_path)  # Elimina el archivo PEM temporal del certificado
-        os.remove(key_path)  # Elimina el archivo PEM temporal de la clave
+        os.remove(cert_path)
+        os.remove(key_path)
 
     return response.text
 
 def fetch_data(dni, sexo):
-    """Obtiene datos de varios servicios SOAP."""
     results = {}
     for service in ['padres', 'hijos']:
         xml_response = make_soap_request(service, dni, sexo)
@@ -151,7 +126,6 @@ def fetch_data(dni, sexo):
 
 @app.route('/api/fetch_data', methods=['GET'])
 def api_fetch_data():
-    """Maneja la solicitud GET para obtener datos."""
     dni = request.args.get('dni')
     sexo = request.args.get('sexo')
 
@@ -164,5 +138,5 @@ def api_fetch_data():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8080)
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=8080)
