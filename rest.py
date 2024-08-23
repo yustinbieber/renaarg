@@ -14,12 +14,12 @@ CERT_PFX_BASE64 = os.getenv('CERT_PFX_BASE64')
 CERT_PASSWORD = os.getenv('CERT_PASSWORD', 'sape')
 
 def decode_cert(cert_base64):
-    """Decodifica el archivo PFX desde Base64 y guarda el contenido en un archivo temporal."""
+    """Decodifica el archivo PFX desde Base64 y guarda el contenido en un archivo permanente."""
     cert_data = base64.b64decode(cert_base64)
-    with tempfile.NamedTemporaryFile(delete=False, suffix='.pfx') as cert_file:
+    cert_path = 'cert.pfx'
+    with open(cert_path, 'wb') as cert_file:
         cert_file.write(cert_data)
-        cert_file.close()  # Asegúrate de cerrar el archivo para que pueda ser leído más tarde
-        return cert_file.name
+    return cert_path
 
 
 SOAP_SERVICES = {
