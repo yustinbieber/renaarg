@@ -1,7 +1,6 @@
 from flask import Flask, request, jsonify
 import requests
 import xmltodict
-from requests_toolbelt.adapters.ssl import SSLAdapter
 from cryptography.hazmat.primitives.serialization import pkcs12
 from cryptography.hazmat.primitives import serialization
 import tempfile
@@ -19,6 +18,7 @@ def decode_cert(cert_base64):
     cert_data = base64.b64decode(cert_base64)
     with tempfile.NamedTemporaryFile(delete=False, suffix='.pfx') as cert_file:
         cert_file.write(cert_data)
+        cert_file.close()  # Asegúrate de cerrar el archivo para que pueda ser leído más tarde
         return cert_file.name
 
 
@@ -122,9 +122,9 @@ def make_soap_request(service_name, dni, sexo):
             verify=False  # Desactiva la verificación del certificado
         )
     finally:
-        os.remove(cert_path)
-        os.remove(key_path)
         os.remove(cert_path)  # Elimina el archivo PFX temporal
+        os.remove(cert_path)  # Elimina el archivo PEM temporal del certificado
+        os.remove(key_path)  # Elimina el archivo PEM temporal de la clave
 
     return response.text
 
