@@ -4,3 +4,4 @@ xmltodict
 cryptography
 pillow 
 python-telegram-bot
+requests-toolbelt
