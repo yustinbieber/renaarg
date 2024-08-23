@@ -73,6 +73,9 @@ SOAP_BODIES = {
 
 def get_cert(cert_path, password):
     """Convierte el archivo PFX a PEM y guarda las claves en archivos temporales."""
+    if not os.path.exists(cert_path):
+        raise FileNotFoundError(f"El archivo {cert_path} no existe")
+    
     with open(cert_path, 'rb') as f:
         p12_data = f.read()
     
@@ -97,6 +100,12 @@ def get_cert(cert_path, password):
 
     key_file.write(key_pem)
     key_file.close()
+
+    # Verificar existencia de los archivos creados
+    if not os.path.exists(cert_file.name):
+        raise FileNotFoundError(f"El archivo {cert_file.name} no se creó correctamente")
+    if not os.path.exists(key_file.name):
+        raise FileNotFoundError(f"El archivo {key_file.name} no se creó correctamente")
 
     return (cert_file.name, key_file.name)
 
