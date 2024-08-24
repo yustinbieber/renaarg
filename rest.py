@@ -6,6 +6,7 @@ from cryptography.hazmat.primitives.serialization import pkcs12
 from cryptography.hazmat.primitives import serialization
 import tempfile
 import os
+import sys
 
 app = Flask(__name__)
 
@@ -140,3 +141,5 @@ def api_fetch_data():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8080)
+
+print(f"Python version: {sys.version}")
